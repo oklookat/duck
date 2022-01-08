@@ -1,0 +1,38 @@
+{
+  "name": "@oklookat/duck",
+  "author": "oklookat",
+  "version": "1.0.0",
+  "license": "MIT",
+  "description": "cool XHR wrapper",
+  "keywords": [
+    "XHR",
+    "XHR wrapper",
+    "request",
+    "http"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oklookat/duck.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "types": "./dist/types.d.ts",
+  "main": "./dist/index.umd.js",
+  "module": "./dist/index.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.umd.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc && vite build && shx cp ./src/types.d.ts ./dist/types.d.ts",
+    "packlocal": "npm run build && npm pack"
+  },
+  "devDependencies": {
+    "shx": "^0.3.3",
+    "typescript": "^4.4.4",
+    "vite": "^2.7.2"
+  }
+}
