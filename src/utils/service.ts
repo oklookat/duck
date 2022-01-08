@@ -52,9 +52,7 @@ export default class Service {
 
     /** trim excess whitespace off the beginning and end of a string */
     public static trim(str: string): string {
-        str = str.trim()
-        str = str.replace(/^\s+|\s+$/g, '')
-        return str
+        return str.trim()
     }
 
     /** set request params to url using {@link URL} object */
