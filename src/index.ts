@@ -242,4 +242,5 @@ export default class duck {
             h.config.hooks[h.name](h as any)
         }
     }
+    
 }
