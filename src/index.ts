@@ -62,6 +62,7 @@ export default class duck {
 
     /** create XHR, set settings and headers, then send request via {@link setupHooksAndSend} */
     private buildAndSend(method: RequestMethod, rc: RequestConfig): Promise<Response> {
+        rc.method = method
         let xhr = new XMLHttpRequest();
         xhr.timeout = this.config.timeout || 15000
         // url

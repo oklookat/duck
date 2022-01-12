@@ -101,7 +101,11 @@ export type GlobalConfig = BasicConfig & {
 
 /** configuration for one request */
 export type RequestConfig = BasicConfig & {
-    /** URL or path like '/hello/world' if {@link TGlobalConfig.baseURL baseURL} setted */
+    /** this property is set automatically.
+     *  What is it for? For example: understand in a hook what kind of method
+     */
+    method?: RequestMethod
+    /** URL or path like '/hello/world' if {@link GlobalConfig.baseURL baseURL} setted */
     url: string
     body?: RequestBody
     params?: RequestParams
