@@ -92,7 +92,7 @@ export default class Validator {
         return result
     }
 
-    // iwsit checks
+    // duck checks
 
     /** check is hookName in hooks */
     public static isHookAvailable(hookName: HookName, hooks?: Hooks): boolean {
