@@ -1,0 +1,21 @@
+# test when push to the dev branch
+
+name: tests
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  test-vitest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+      - name: install dependencies
+        run: npm ci && npm install
+      - name: run tests
+        run: npm run test

@@ -1,7 +1,6 @@
-# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
-# For more information see: https://help.github.com/actions/language-and-framework-guides/publishing-nodejs-packages
+# test & build & publish when push to the main branch
 
-name: Node.js Package
+name: test, build, publish
 
 on:
   push:
@@ -19,7 +18,11 @@ jobs:
         with:
           node-version: 16
           registry-url: https://registry.npmjs.org/
-      - id: build
-        run: npm ci && npm install && npm run build
-      - id: publish
+      - name: install dependencies
+        run: npm ci && npm install
+      - name: run tests (vitest)
+        run: npm run test
+      - name: build
+        run: npm run build
+      - name: publish
         run: npm publish --access public
