@@ -22,7 +22,7 @@ THE SOFTWARE.
  */
 
 
-import type { GlobalConfig, RequestConfig, Headers, RequestParams } from "../types";
+import type { DuckRequest } from "../types";
 import Validator from "./validator";
 
 /** useful things */
@@ -30,73 +30,138 @@ export default class Service {
 
     /**
      * set base URL
-     * @param url url like: /user
-     * @param base url like: example.com
-     * @returns url like: example.com/user
+     * @param url path like: /user (or full url, but without base param)
+     * @param base url like: https://example.com/api
+     * @returns url like: https://example.com/api/user
      */
-    public static setBaseURL(url: string, base?: string): string {
-        if (!base) {
-            return url
+    public static setBaseURL(url?: string, base?: string): string {
+        let finalURL: URL
+        if (base) {
+            finalURL = new URL(base)
+            if (url) {
+                finalURL.pathname += `/${url}`
+            }
+            finalURL.pathname = this.replaceDoubleSlashes(finalURL.pathname)
+        } else if (url) {
+            finalURL = new URL(url)
+        } else {
+            throw Error('empty URL')
         }
-        return Service.replaceDoubleSlashes(`${base}/${url}`)
+        // recheck
+        try {
+            let urlString = finalURL.toString()
+            finalURL = new URL(urlString)
+        } catch (err) {
+            throw err
+        }
+        return finalURL.toString()
     }
 
     /**
      * replace double slashes
-     * @param s string like: hello//world////
-     * @returns string like: hello/world
+     * @param str string like: //hello//world////
+     * @returns string like: /hello/world/
      */
-    public static replaceDoubleSlashes(s: string): string {
-        return s.replace(/(?<!:)\/\/+/g, '/')
+    public static replaceDoubleSlashes(str: string): string {
+        const isString = Validator.isString(str)
+        if (!isString) {
+            const hasToString = Validator.isHasToStringMethod(str)
+            if (!hasToString) {
+                return str
+            }
+            str = str.toString()
+        }
+        return str.replace(/(?<!:)\/\/+/g, "/")
     }
 
     /** trim excess whitespace off the beginning and end of a string */
     public static trim(str: string): string {
+        const isNotString = !Validator.isString(str)
+        if (isNotString) {
+            const hasToString = Validator.isHasToStringMethod(str)
+            if (!hasToString) {
+                return str
+            }
+            str = str.toString()
+        }
         return str.trim()
     }
 
     /** set request params to url using {@link URL} object */
-    public static setRequestParams(url: string, params?: RequestParams): string {
+    public static setRequestParams(url: string, params?: DuckRequest.Params): string {
         if (!params) {
             return url
         }
-        let urlObj = new URL(url)
-        for (const param in params) {
-            urlObj.searchParams.set(param, params[param].toString())
+        const urlObj = new URL(url)
+        for (const prop in params) {
+            const paramValue = params[prop]
+            const hasToString = Validator.isHasToStringMethod(paramValue)
+            if (!hasToString) {
+                continue
+            }
+            const paramValueString = paramValue.toString()
+            urlObj.searchParams.set(prop, paramValueString)
         }
         return urlObj.toString()
     }
 
     /** set request headers to XHR based on settings */
-    public static setRequestHeaders(xhr: XMLHttpRequest, rc: RequestConfig, gc: GlobalConfig) {
-        const set = (headers?: Headers) => {
+    public static setRequestHeaders(setter: DuckRequest.HeaderSetter, ...headers: DuckRequest.Headers[]) {
+        if (!headers) {
+            return
+        }
+        const set = (headers?: DuckRequest.Headers) => {
             if (!headers) {
                 return
             }
-            for (const header in headers) {
-                xhr.setRequestHeader(header, headers[header].toString())
+            for (const prop in headers) {
+                const headerValue = headers[prop]
+                const hasToString = Validator.isHasToStringMethod(headerValue)
+                if (!hasToString) {
+                    continue
+                }
+                const headerValueString = headerValue.toString()
+                setter.setRequestHeader(prop, headerValueString)
             }
         }
-        set(gc.headers)
-        set(rc.headers)
+        for (const head of headers) {
+            set(head)
+        }
     }
 
     /** check content type in local and global config. If content type not in local and global, set header in local config */
-    public static setContentTypeIfUnset(value: string | number, gc: GlobalConfig, rc: RequestConfig) {
-        const header = 'Content-Type'
-        if (gc.headers && header in gc.headers) {
+    public static setContentTypeIfUnset(value: string | number, headers: DuckRequest.Headers) {
+        const isHeaderExists = (name: string): boolean => {
+            return headers && name in headers
+        }
+        const basicCase = "Content-Type"
+        let caseExists = isHeaderExists(basicCase)
+        if (caseExists) {
             return
         }
-        if (rc.headers && header in rc.headers) {
+        // check cases
+        const toBasicCase = (original: string) => {
+            const oldValue = headers[original]
+            delete headers[original]
+            headers[basicCase] = oldValue
+        }
+        const upperCase = basicCase.toUpperCase()
+        caseExists = isHeaderExists(upperCase)
+        if (caseExists) {
+            toBasicCase(upperCase)
             return
         }
-        if (!rc.headers) {
-            rc.headers = {}
+        const lowerCase = basicCase.toLowerCase()
+        caseExists = isHeaderExists(lowerCase)
+        if (caseExists) {
+            toBasicCase(lowerCase)
+            return
         }
-        rc.headers[header] = value
+        headers[basicCase] = value
     }
 
-    /** if rawValue string - check is valid json, trim and return. Otherwise - stringify and return. If error while validation or stringify - throws error */
+    /** if rawValue string - check is valid json, trim and return. Otherwise - stringify and return. 
+     * If error while validation or stringify - throws error */
     public static stringifySafely(rawValue: any): any {
         const getJSON = () => {
             try {
@@ -106,22 +171,22 @@ export default class Service {
                 throw err
             }
         }
-        // try to make json string if rawValue not a string
-        if (!Validator.isString(rawValue)) {
+        const notString = !Validator.isString(rawValue)
+        if (notString) {
+            // not a string? try make JSON string
             return getJSON()
         }
-        // otherwise, maybe rawValue a JSON string?
+        // ok, maybe rawValue a JSON string?
         try {
-            // check is json
+            // check & trim if all good
             JSON.parse(rawValue)
-            // remove spaces
             return this.trim(rawValue)
         } catch (err: unknown) {
-            if (err instanceof Error && err.name !== 'SyntaxError') {
+            if (err instanceof Error && err.name !== "SyntaxError") {
                 throw err
             }
         }
         // ok, try make json anyway
-        getJSON()
+        return getJSON()
     }
 }

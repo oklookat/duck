@@ -1,156 +1,175 @@
 /** XHR wrapper */
 export default class duck {
-    public config: GlobalConfig
-    constructor(config?: GlobalConfig)
-    public GET(config: RequestConfig): Promise<Response>
-    public POST(config: RequestConfig): Promise<Response>
-    public PUT(config: RequestConfig): Promise<Response>
-    public DELETE(config: RequestConfig): Promise<Response>
-    public HEAD(config: RequestConfig): Promise<Response>
-    public OPTIONS(config: RequestConfig): Promise<Response>
-    public PATCH(config: RequestConfig): Promise<Response>
+    /** get package version */
+    public get version(): string
+    /** main config */
+    public config: Config
+    constructor(config?: Config)
+    /** send request (GET) */
+    public GET(config: DuckRequest.Config): Promise<DuckResponse>
+    /** send request (POST) */
+    public POST(config: DuckRequest.Config): Promise<DuckResponse>
+    /** send request (PUT) */
+    public PUT(config: DuckRequest.Config): Promise<DuckResponse>
+    /** send request (DELETE) */
+    public DELETE(config: DuckRequest.Config): Promise<DuckResponse>
+    /** send request (HEAD) */
+    public HEAD(config: DuckRequest.Config): Promise<DuckResponse>
+    /** send request (OPTIONS) */
+    public OPTIONS(config: DuckRequest.Config): Promise<DuckResponse>
+    /** send request (PATCH) */
+    public PATCH(config: DuckRequest.Config): Promise<DuckResponse>
 }
 
-/** you can cancel request by passing Cancelable in request config */
-export interface Cancelable {
-    cancel: (message?: string) => void
+/** you can cancel request by passing CancelToken instance in request config */
+export class CancelToken {
+    /** cancel request */
+    cancel(message?: string): void
 }
 
-/** available request methods */
-export enum RequestMethod {
-    GET = "GET",
-    POST = "POST",
-    PUT = "PUT",
-    DELETE = "DELETE",
-    HEAD = "HEAD",
-    OPTIONS = "OPTIONS",
-    PATCH = "PATCH"
-}
-
-/** available hooks */
-export enum HookName {
-    onRequest = "onRequest",
-    onResponse = "onResponse",
-    onDownload = "onDownload",
-    onUploadProgress = "onUploadProgress",
-    onUploaded = "onUploaded",
-    onError = "onError"
-}
-
-/** available request errors */
-export enum RequestError {
-    /** connection timeout */
-    timeout = "timeout",
-    /** cors-like error */
-    network = "network",
-    /** error while request */
-    request = "request",
-    /** server error (not 2** status code) */
-    response = "response",
-    /** request has been cancelled */
-    cancel = "cancel"
-}
-
-/** available request body */
-export type RequestBody = string | number | object | Blob | BufferSource | FormData | URLSearchParams | ReadableStream
-
-/** headers */
-export type Headers = {
-    [name: string]: string | number
-}
-
-/** request params */
-export type RequestParams = {
-    [name: string]: string | number | boolean
-}
-
-/** response from server */
-export type Response = {
-    body: any
-    statusCode: number
-}
-
-/** request errors */
-export type RequestFail = {
-    type: RequestError.timeout | RequestError.network | RequestError.request
-} | Response & {
-    type: RequestError.response
-} | {
-    type: RequestError.cancel
-    message?: string | number
-}
-
-/** global & local configs extends this */
-export type BasicConfig = {
-    /** @see https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials */
-    withCredentials?: boolean
-    /** how long to wait response from the server (in ms)  */
-    timeout?: number
-    headers?: Headers
-    hooks?: Hooks
-}
-
-/** global configuration for all requests */
-export type GlobalConfig = BasicConfig & {
+/** duck main config */
+export type Config = DuckBasic.Config & {
     /**
-     * URL like https://example.com.
-     * Any request will paste this url before request url.
+     * Base URL. After settings this option, you can use relative paths in request.
+     * 
+     * Example: 
+     * 
+     * baseURL = https://example.com/api/v1.
+     * 
+     * {@link RequestConfig.url request url} = "/users"
+     * 
+     * request go to: https://example.com/api/v1/users
      */
     baseURL?: string
 }
 
-/** configuration for one request */
-export type RequestConfig = BasicConfig & {
-    /** this property is set automatically.
-     *  What is it for? For example: understand in a hook what kind of method
-     */
-    method?: RequestMethod
-    /** URL or path like '/hello/world' if {@link GlobalConfig.baseURL baseURL} setted */
-    url: string
-    body?: RequestBody
-    params?: RequestParams
-    /** token for request cancel */
-    cancelToken?: Cancelable
+/** basic things */
+export namespace DuckBasic {
+    /** should have method that converts value to string */
+    export interface Stringer {
+        toString: () => string
+    }
+    /** method that resolves promise */
+    export type Resolver<T> = (value: T | PromiseLike<T>) => void
+    /** method that reject promise */
+    export type Rejector = (reason?: any) => void
+    /** you can cancel request by passing Cancelable implementation in request config */
+    export interface Cancelable {
+        cancel: (message?: string) => void
+    }
+
+    /** global & local configs extends this */
+    export type Config = {
+        /** @see https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials */
+        withCredentials?: boolean
+        /** how long to wait response from the server (in ms)  */
+        timeout?: number
+        headers?: DuckRequest.Headers
+        hooks?: DuckHook.List
+    }
 }
 
+/** request things */
+export namespace DuckRequest {
+    export type Method = "GET" | "POST" | "PUT" | "DELETE" | "HEAD" | "OPTIONS" | "PATCH"
+    export type Body = string | number | object | Blob | BufferSource | FormData | URLSearchParams | ReadableStream
+    export type Params = Record<string | number, DuckBasic.Stringer>
+    export type Headers = Record<string | number, DuckBasic.Stringer>
+    /** should have method to set headers */
+    export interface HeaderSetter {
+        setRequestHeader(name: string, value: string): void
+    }
+    /** configuration for one request */
+    export type Config = DuckBasic.Config & {
+        /** this property is set automatically.
+         * 
+         *  What is it for? For example: understand in a hook what kind of method
+         */
+        method?: DuckRequest.Method
+        /** 
+         * request URL or path like "/hello/world" if {@link GlobalConfig.baseURL baseURL} setted */
+        url: string
+        body?: DuckRequest.Body
+        params?: DuckRequest.Params
+        /** token for request cancel */
+        cancelToken?: DuckBasic.Cancelable
+    }
+}
 
-/** useful data in hook */
-export type HookOutput = HookOutput.onRequest | HookOutput.onResponse | HookOutput.onLoad | HookOutput.onError
-/** execute functions on XHR lifecycle */
-export type Hooks = { [Name in HookName]?: (output: GetHookOutput<Name>) => void }
-/** get hook type depending on hook name */
-export type GetHookOutput<Name extends HookName, Output = HookOutput> = Output extends { name: infer U } ? Name extends U ? Output : never : never
-// https://qna.habr.com/q/1080798
-export namespace HookOutput {
+/** response from server */
+export type DuckResponse = {
+    body: any
+    statusCode: number
+}
 
-    interface Base {
-        name: HookName
-        config: RequestConfig
-        data: unknown
+/** request/response error */
+export namespace DuckError {
+
+    /** any error */
+    export type Any = DuckError.Request | DuckError.Responsed
+
+    /** cancel / timeout / CORS / connection */
+    export type Request = {
+        type: "timeout" | "network" | "request"
+    } | {
+        type: "cancel"
+        message?: string | number
     }
 
-    /** requet to server */
-    export interface onRequest extends Base {
-        name: HookName.onRequest
-        data: RequestConfig
+    /** HTTP (399+ status code) */
+    export type Responsed = DuckResponse & {
+        type: "response"
     }
+}
 
-    /** response from server */
-    export interface onResponse extends Base {
-        name: HookName.onResponse
-        data: Response
-    }
+/** hook things */
+export namespace DuckHook {
 
-    /** server download / upload */
-    export interface onLoad extends Base {
-        name: HookName.onDownload | HookName.onUploadProgress | HookName.onUploaded
-        data: ProgressEvent<EventTarget>
-    }
+    /** hook names */
+    export type Name = "onRequest" | "onResponse" | "onDownload" | "onUploadProgress" | "onUploaded" | "onError"
 
-    /** any error: request / cors / timeout etc */
-    export interface onError extends Base {
-        name: HookName.onError
-        data: RequestFail
+    /** execute functions on XHR lifecycle */
+    export type List = { [Name in DuckHook.Name]?: (output: GetOutput<Name>) => void }
+
+    /** any hook from {@link Hook.Output} */
+    export type Any = Output.onRequest | Output.onResponse | Output.onLoad | Output.onError
+
+    // service
+    export type GetOutput<Name extends DuckHook.Name,
+        Output = DuckHook.Any> = Output extends { name: infer U } ? Name extends U ? Output : never : never
+
+    // https://qna.habr.com/q/1080798
+    export namespace Output {
+
+        interface Base {
+            name: DuckHook.Name
+            config: DuckRequest.Config
+            data: unknown
+        }
+
+        /** request to server */
+        export interface onRequest extends Base {
+            name: "onRequest"
+            data: DuckRequest.Config
+        }
+
+        /** response from server */
+        export interface onResponse extends Base {
+            name: "onResponse"
+            data: DuckResponse
+        }
+
+        /** server download / upload */
+        export interface onLoad extends Base {
+            name: "onDownload" | "onUploadProgress" | "onUploaded"
+            data: ProgressEvent<EventTarget>
+        }
+
+        /** any error: request / cors / timeout etc */
+        export interface onError extends Base {
+            name: "onError"
+            data: DuckError.Any
+        }
     }
 }
 

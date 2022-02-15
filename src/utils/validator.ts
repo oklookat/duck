@@ -1,5 +1,6 @@
 // some from: https://github.com/axios/axios/blob/76f09afc03fbcf392d31ce88448246bcd4f91f8c/lib/utils.js
-// by license:
+
+// by license (axios):
 /**
 Copyright (c) 2014-present Matt Zabriskie
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,21 +23,21 @@ THE SOFTWARE.
  */
 
 
-import type { HookName, Hooks } from "../types"
+import type { DuckHook } from "../types"
 
 /** validate things */
 export default class Validator {
 
     public toString = Object.prototype.toString
 
-    // simple checks
+    // simple checks //
 
     public static isUndefined(val: any): boolean {
-        return typeof val === 'undefined'
+        return typeof val === "undefined"
     }
 
     public static isObject(val: any): boolean {
-        return val !== null && typeof val === 'object'
+        return val !== null && typeof val === "object"
     }
 
     public static isFunction(val: any): boolean {
@@ -44,26 +45,26 @@ export default class Validator {
     }
 
     public static isArray(val: any): boolean {
-        return this.toString.call(val) === '[object Array]'
+        return this.toString.call(val) === "[object Array]"
     }
 
     public static isString(val: any): boolean {
-        return typeof val === 'string'
+        return typeof val === "string"
     }
 
-    // not simple checks
+    // not simple checks //
 
     public static isFormData(val: any): boolean {
-        return val instanceof FormData
+        return toString.call(val) === "[object FormData]"
     }
 
     public static isArrayBuffer(val: any): boolean {
-        return toString.call(val) === '[object ArrayBuffer]'
+        return toString.call(val) === "[object ArrayBuffer]"
     }
 
     public static isBuffer(val: any): boolean {
-        return val !== null && !this.isUndefined(val) && val.constructor !== null && !this.isUndefined(val.constructor)
-            && typeof val.constructor.isBuffer === 'function' && val.constructor.isBuffer(val)
+        return val && val.constructor
+            && typeof val.constructor.isBuffer === "function" && val.constructor.isBuffer(val)
     }
 
     public static isStream(val: any): boolean {
@@ -71,15 +72,15 @@ export default class Validator {
     }
 
     public static isFile(val: any): boolean {
-        return toString.call(val) === '[object File]'
+        return toString.call(val) === "[object File]"
     }
 
     public static isBlob(val: any): boolean {
-        return val instanceof Blob
+        return toString.call(val) === "[object Blob]"
     }
 
     public static isURLSearchParams(val: any): boolean {
-        return typeof URLSearchParams !== 'undefined' && val instanceof URLSearchParams
+        return typeof URLSearchParams !== "undefined" && val instanceof URLSearchParams
     }
 
     public static isArrayBufferView(val: any): boolean {
@@ -92,26 +93,31 @@ export default class Validator {
         return result
     }
 
-    // duck checks
+    // duck checks //
 
     /** check is hookName in hooks */
-    public static isHookAvailable(hookName: HookName, hooks?: Hooks): boolean {
+    public static isHookAvailable(hookName: DuckHook.Name, hooks?: DuckHook.List): boolean {
         if (!hooks) {
             return false
         }
         return hookName in hooks && this.isFunction(hooks[hookName])
     }
 
-    /** check is code in status code. Like: check is 4xx HTTP error. */
-    public static isCodeXX(statusCode: number, code: number): boolean {
-        // return statusCode.toString()[0] === code.toString()[0]
-        return (statusCode - code) >= 0 && (statusCode - code) <= 99
+    /** is status code an HTTP error? */
+    public static isHTTPError(statusCode: number): boolean {
+        return statusCode > 399
     }
 
     /** is request in process */
     public static isRequestActive(xhr: XMLHttpRequest): boolean {
         const readyState = xhr.readyState
-        const isRunning = readyState !== 0 && readyState !== 4
+        const isRunning = readyState > 0 && readyState < 4
         return isRunning
     }
+
+    /** has toString method? */
+    public static isHasToStringMethod(val: any): boolean {
+        return val && val["toString"] && this.isFunction(val["toString"])
+    }
+
 }

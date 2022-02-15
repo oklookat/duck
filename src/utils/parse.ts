@@ -24,40 +24,54 @@ THE SOFTWARE.
 
 
 import Service from "./service";
-import type { GlobalConfig, RequestConfig } from "../types";
+import type { Config, DuckRequest } from "../types";
 import Validator from "./validator";
 
 /** parse things */
 export default class Parse {
 
-    /** set headers if not set. If it's json, auto stringify before request. Returns body */
-    public static requestBody(body: any, rc: RequestConfig, gc: GlobalConfig): any {
-        const simpleData = Validator.isFormData(body) ||
+    /** check body and set headers if needed */
+    public static requestBody(body: any, rc: DuckRequest.Config, gc: Config): any {
+        // binary?
+        const isBin =
+            Validator.isFormData(body) ||
             Validator.isArrayBuffer(body) ||
             Validator.isBuffer(body) ||
             Validator.isStream(body) ||
             Validator.isFile(body) ||
             Validator.isBlob(body)
-        if (simpleData) {
+        if (isBin) {
             return body
         }
         if (Validator.isArrayBufferView(body)) {
-            return body
+            return body.buffer;
         }
+        /** set content-type header to two configs */
+        const cTypeSetter = (value: string) => {
+            if (!gc.headers) {
+                gc.headers = {}
+            }
+            if (!rc.headers) {
+                rc.headers = {}
+            }
+            Service.setContentTypeIfUnset(value, gc.headers)
+            Service.setContentTypeIfUnset(value, rc.headers)
+        }
+        // request params?
         if (Validator.isURLSearchParams(body)) {
-            Service.setContentTypeIfUnset('application/x-www-form-urlencoded; charset=utf-8', gc, rc)
+            cTypeSetter("application/x-www-form-urlencoded; charset=utf-8")
             return body
         }
-        // if json convertable
+        // can be converted to JSON?
         if (Validator.isObject(body)) {
-            Service.setContentTypeIfUnset('application/json', gc, rc)
+            cTypeSetter("application/json")
             body = Service.stringifySafely(body)
             return body
         }
         return body
     }
 
-    /** parse json after response. Returns body */ 
+    /** parse json after response. Returns body */
     public static responseBody(body: any): any {
         if (!body) {
             return body
