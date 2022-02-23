@@ -6,6 +6,11 @@ on:
   push:
     branches:
       - dev
+  pull_request:
+    types:
+      - opened
+    branches:    
+      - dev
 
 jobs:
   test-vitest:
