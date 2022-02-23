@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { duckd } from "./index.test"
+import { duckd } from "."
 
 // @vitest-environment jsdom
 

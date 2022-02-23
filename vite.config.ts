@@ -1,4 +1,3 @@
-/// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import path from 'path'
 
@@ -17,11 +16,8 @@ export default defineConfig({
       entry: path.resolve(__dirname, './src/index.ts'),
       fileName: (format) => `index.${format}.js`
     },
-    rollupOptions: {
-      external: []
-    }
-  },
-  test: {
-    setupFiles: './src/test/setup.ts'
-  },
+    // rollupOptions: {
+    //   external: []
+    // }
+  }
 })

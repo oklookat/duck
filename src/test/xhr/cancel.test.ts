@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { CancelToken } from "../.."
 import { DuckHook } from "../../types"
-import { duckd, hooks } from "./index.test"
+import { duckd, hooks } from "."
 
 // @vitest-environment jsdom
 

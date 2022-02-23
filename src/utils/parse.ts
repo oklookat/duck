@@ -54,7 +54,10 @@ export default class Parse {
             if (!rc.headers) {
                 rc.headers = {}
             }
-            Service.setContentTypeIfUnset(value, gc.headers)
+            // disable set header if content-type setted in global config
+            if(value in gc.headers) {
+                return
+            }
             Service.setContentTypeIfUnset(value, rc.headers)
         }
         // request params?

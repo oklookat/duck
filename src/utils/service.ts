@@ -129,7 +129,7 @@ export default class Service {
         }
     }
 
-    /** check content type in local and global config. If content type not in local and global, set header in local config */
+    /** if not exists, set Content-Type header in headers */
     public static setContentTypeIfUnset(value: string | number, headers: DuckRequest.Headers) {
         const isHeaderExists = (name: string): boolean => {
             return headers && name in headers

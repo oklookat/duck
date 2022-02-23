@@ -1,8 +1,8 @@
 import { beforeAll, afterAll, afterEach } from 'vitest'
 import { setupServer } from 'msw/node'
-import { rest } from 'msw'
+import { DefaultRequestBody, PathParams, ResponseComposition, ResponseResolver, rest, RestContext, RestRequest } from 'msw'
 
-import { articlesPosts, articlesURL } from './xhr/index.test'
+import { articlesPosts, articlesURL } from './xhr'
 import { getParams } from './xhr/get.test'
 
 class Util {
@@ -19,7 +19,7 @@ class Util {
 class TheHandlers {
 
   static getWithParams() {
-    return rest.get(articlesURL, (req, res, ctx) => {
+    return (req: RestRequest<never, PathParams>, res: ResponseComposition<DefaultRequestBody>, ctx: RestContext) => {
       let result: any = articlesPosts
       const hasNiceParams = req.url.searchParams.toString() === getParams.toString()
       if (hasNiceParams) {
@@ -28,11 +28,11 @@ class TheHandlers {
       return res(
         ctx.status(200),
         ctx.json(result))
-    })
+    }
   }
 
   static post() {
-    return rest.post(articlesURL, (req, res, ctx) => {
+    return (req: RestRequest<never, PathParams>, res: ResponseComposition<DefaultRequestBody>, ctx: RestContext) => {
       let parsed: any
       try {
         // @ts-ignore
@@ -43,33 +43,40 @@ class TheHandlers {
       return res(
         ctx.status(200),
         ctx.json(parsed))
-    })
+    }
   }
 
   static patchThrottled() {
-    return rest.patch(articlesURL + "/throttled", async (req, res, ctx) => {
+    return (req: RestRequest<never, PathParams>, res: ResponseComposition<DefaultRequestBody>, ctx: RestContext) => {
       return res(
-        ctx.delay(5000),
+        //ctx.delay(5000),
         ctx.json(articlesPosts)
       )
-    })
+    }
   }
 
 }
 
 export const restHandlers = [
-  TheHandlers.getWithParams(),
-  TheHandlers.post(),
-  TheHandlers.patchThrottled(),
+  rest.get(articlesURL, TheHandlers.getWithParams()),
+  rest.post(articlesURL, TheHandlers.post()),
+  rest.patch(articlesURL + "/throttled", TheHandlers.patchThrottled())
 ]
 
 const server = setupServer(...restHandlers)
 
-// start server before all tests
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
+beforeAll(() => {
+  // Establish requests interception layer before all tests.
+  server.listen()
+})
 
-// close server after all tests
-afterAll(() => server.close())
+afterAll(() => {
+  // Clean up after all tests are done, preventing this
+  // interception layer from affecting irrelevant tests.
+  server.close()
+})
 
 // reset handlers after each test `important for test isolation`
-afterEach(() => server.resetHandlers())
+afterEach(() => {
+  server.resetHandlers()
+})
