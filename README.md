@@ -1,4 +1,3 @@
-# README WORK IN PROGRESS
 # Duck: XHR wrapper
 
 **I need something small and powerful for making XHR requests in my web app. And here is it — Duck.**
@@ -7,11 +6,10 @@
 1. [Easy configuration](#Easy-configuration)
 2. [Hooks](#Hooks)
 3. [Automatic Content-Type/Response body parsing](#Automatic-Content-Type-Response-body-parsing)
-5. Request cancellation
-6. Full TypeScript types support
-7. Independence from huge packages like Axios
-8. Modern code without legacy
-~~9. npm package with funny name~~
+4. [Request cancellation](#Request-cancellation)
+5. [TypeScript](#Typescript)
+6. [Modern code without legacy](#Modern)
+7. ~~npm package with funny name~~
 
 ## Easy configuration
 *Or no configuration at all.*
@@ -120,3 +118,24 @@ Duck does it.
 In short: if response body is a JSON string, XHR wrapper need to parse this string to object.
 
 Duck does it.
+
+## Request cancellation
+Sometimes you need to cancel request. Import CancelToken, or implement Cancelable interface, then put this in request config. When the moment comes, call cancel() method.
+```javascript
+import { CancelToken } from "@oklookat/duck"
+
+const token = new CancelToken()
+
+Duck.GET({  url: "articles", params: { show: "published" }, cancelToken: token})
+	.then(response => {
+		const articles = response.body
+	})
+	
+token.cancel()
+```
+## Typescript
+Duck written in Typescript. That means you have full types support. That's good.
+
+## Modern
+For example: Axios is a huge package, big HTTP client with legacy support/legacy code. 
+I wanted modern technology! Modern JS and cool tools like Vite. And in general I wanted something of my own. That's all.
